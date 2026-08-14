@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sanne Traint</title>
+<meta name="theme-color" content="#fff5fa">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon.svg">
+<style>
+  :root {
+    --bike1:#ff8c42; --bike2:#ff5db1;
+    --run1:#2dd4bf;  --run2:#38bdf8;
+    --rest1:#c4b5fd; --rest2:#a78bfa;
+    --ink:#3b2d4f; --ink-soft:#7d6f95;
+    --card:#ffffff; --line:#f0e4f2;
+    --radius:22px;
+    font-family:-apple-system,"SF Pro Rounded",Nunito,Quicksand,"Segoe UI",Roboto,sans-serif;
+  }
+  * { box-sizing:border-box; margin:0; }
+  body {
+    color:var(--ink);
+    background:
+      radial-gradient(900px 500px at 85% -10%, #ffe3f1 0%, transparent 60%),
+      radial-gradient(800px 500px at -10% 20%, #dff6ff 0%, transparent 55%),
+      radial-gradient(700px 500px at 50% 110%, #e9fbf5 0%, transparent 55%),
+      #fff9fc;
+    min-height:100vh;
+    padding:18px 14px calc(30px + env(safe-area-inset-bottom));
+    max-width:520px; margin:0 auto;
+    -webkit-tap-highlight-color:transparent;
+  }
+
+  header { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:6px; }
+  h1 { font-size:26px; letter-spacing:-.5px; }
+  h1 .grad { background:linear-gradient(90deg,var(--bike1),var(--bike2),var(--run2)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .topbtns { display:flex; gap:8px; }
+  .iconbtn {
+    width:42px; height:42px; border-radius:14px; border:none; cursor:pointer; font-size:19px;
+    background:var(--card); box-shadow:0 3px 12px rgba(150,90,160,.12); position:relative;
+  }
+  .iconbtn .dot { position:absolute; top:6px; right:6px; width:9px; height:9px; border-radius:50%; background:#22c55e; display:none; }
+  .iconbtn.synced .dot { display:block; }
+
+  .statbar { display:flex; gap:8px; margin:10px 0 14px; }
+  .stat {
+    flex:1; background:var(--card); border-radius:16px; padding:9px 12px; text-align:center;
+    box-shadow:0 3px 12px rgba(150,90,160,.10); font-size:13px; color:var(--ink-soft);
+  }
+  .stat b { display:block; font-size:17px; color:var(--ink); }
+
+  .weeknav { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:12px; }
+  .weeknav button {
+    border:none; background:var(--card); border-radius:12px; width:38px; height:38px; font-size:17px;
+    cursor:pointer; box-shadow:0 3px 10px rgba(150,90,160,.10); color:var(--ink);
+  }
+  .weeklabel { text-align:center; flex:1; }
+  .weeklabel b { font-size:16px; }
+  .weeklabel small { display:block; color:var(--ink-soft); font-size:12px; margin-top:1px; }
+  .todaybtn {
+    width:auto !important; padding:0 12px; font-size:13px !important; font-weight:700; color:#fff !important;
+    background:linear-gradient(90deg,var(--run1),var(--run2)) !important;
+  }
+
+  .day {
+    display:flex; align-items:center; gap:13px; background:var(--card);
+    border-radius:var(--radius); padding:13px 15px; margin-bottom:11px; cursor:pointer;
+    box-shadow:0 4px 16px rgba(150,90,160,.10); border:2px solid transparent;
+    transition:transform .1s;
+  }
+  .day:active { transform:scale(.985); }
+  .day.today { border-color:#ffd166; box-shadow:0 4px 18px rgba(255,180,60,.28); }
+  .day.rest { opacity:.78; }
+  .daydate { width:46px; text-align:center; flex-shrink:0; }
+  .daydate .dow { font-size:12px; font-weight:800; text-transform:uppercase; color:var(--ink-soft); letter-spacing:.5px; }
+  .daydate .num { font-size:21px; font-weight:800; }
+  .daydate .todaytag { font-size:9px; font-weight:800; color:#e8a200; text-transform:uppercase; }
+  .dayemoji {
+    width:46px; height:46px; border-radius:15px; flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:23px;
+  }
+  .dayemoji.bike { background:linear-gradient(135deg,#ffe4cf,#ffd9ec); }
+  .dayemoji.run  { background:linear-gradient(135deg,#d5f8f2,#dbf1ff); }
+  .dayemoji.rest { background:linear-gradient(135deg,#efeafd,#e6e0fb); }
+  .dayinfo { flex:1; min-width:0; }
+  .dayinfo .name { font-weight:800; font-size:15px; }
+  .dayinfo .meta { font-size:12.5px; color:var(--ink-soft); margin-top:2px; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .chip { font-size:10.5px; font-weight:800; padding:2px 8px; border-radius:99px; color:#fff; text-transform:uppercase; letter-spacing:.4px; }
+  .chip.bike { background:linear-gradient(90deg,var(--bike1),var(--bike2)); }
+  .chip.run  { background:linear-gradient(90deg,var(--run1),var(--run2)); }
+  .doneball {
+    width:32px; height:32px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+    font-size:15px; background:#f3edf7; color:#c9bbd6;
+  }
+  .doneball.on { background:linear-gradient(135deg,#34d399,#22c55e); color:#fff; box-shadow:0 3px 10px rgba(34,197,94,.4); }
+
+  footer { text-align:center; color:#c1b3d0; font-size:11px; margin-top:22px; }
+
+  /* ---------- modals ---------- */
+  .overlay {
+    position:fixed; inset:0; background:rgba(60,35,80,.35); backdrop-filter:blur(3px);
+    display:none; align-items:flex-end; justify-content:center; z-index:50; padding:0;
+  }
+  .overlay.open { display:flex; }
+  .sheet {
+    background:#fffdfe; width:100%; max-width:520px; border-radius:26px 26px 0 0;
+    padding:20px 20px calc(24px + env(safe-area-inset-bottom)); max-height:88vh; overflow-y:auto;
+    animation:up .22s ease-out;
+  }
+  @keyframes up { from { transform:translateY(40px); opacity:.5; } to { transform:none; opacity:1; } }
+  .sheethead { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:4px; }
+  .sheethead h2 { font-size:20px; }
+  .sheethead small { color:var(--ink-soft); font-size:13px; display:block; margin-top:2px; font-weight:400; }
+  .closebtn { border:none; background:#f3edf7; width:34px; height:34px; border-radius:50%; font-size:15px; cursor:pointer; color:var(--ink-soft); flex-shrink:0; }
+
+  .block { border-radius:16px; padding:12px 14px; margin-top:10px; }
+  .block .bt { font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.6px; margin-bottom:3px; }
+  .block .bd { font-size:14.5px; line-height:1.45; }
+  .block.wu { background:#fff4e8; } .block.wu .bt { color:#e07b1f; }
+  .block.kn { background:#ffeaf4; } .block.kn .bt { color:#e0489a; }
+  .block.cd { background:#e8f8f3; } .block.cd .bt { color:#1ba57f; }
+  .block.run.wu { background:#e6f9f6; } .block.run.wu .bt { color:#0d9488; }
+  .block.run.kn { background:#e3f3ff; } .block.run.kn .bt { color:#0284c7; }
+  .block.run.cd { background:#f0ecfd; } .block.run.cd .bt { color:#7c5cd6; }
+
+  .btnrow { display:flex; gap:9px; margin-top:16px; }
+  .btn {
+    flex:1; border:none; border-radius:15px; padding:13px; font-size:14.5px; font-weight:800; cursor:pointer;
+    background:#f3edf7; color:var(--ink); font-family:inherit;
+  }
+  .btn.primary { background:linear-gradient(90deg,var(--bike1),var(--bike2)); color:#fff; box-shadow:0 4px 14px rgba(255,110,150,.35); }
+  .btn.primary.run { background:linear-gradient(90deg,var(--run1),var(--run2)); box-shadow:0 4px 14px rgba(56,189,248,.35); }
+  .btn.ghost { background:#f3edf7; }
+
+  .smilies { display:flex; gap:8px; margin-top:14px; }
+  .smiley { flex:1; font-size:24px; padding:9px 0 6px; border-radius:14px; border:2px solid var(--line); background:#fff; cursor:pointer; text-align:center; }
+  .smiley small { display:block; font-size:10px; font-weight:700; color:var(--ink-soft); }
+  .smiley.sel { border-color:var(--bike2); background:#fff0f7; }
+
+  .setlabel { font-size:13px; font-weight:800; margin:18px 0 8px; color:var(--ink); }
+  .setlabel:first-of-type { margin-top:10px; }
+  .stepper { display:flex; align-items:center; gap:14px; background:#f7f2f9; border-radius:15px; padding:8px; }
+  .stepper button { width:38px; height:38px; border:none; border-radius:12px; background:#fff; font-size:19px; cursor:pointer; box-shadow:0 2px 6px rgba(150,90,160,.15); color:var(--ink); }
+  .stepper b { flex:1; text-align:center; font-size:16px; }
+  .segs { display:flex; gap:7px; }
+  .seg {
+    flex:1; text-align:center; padding:10px 4px; border-radius:14px; background:#f7f2f9; cursor:pointer;
+    font-size:13px; font-weight:700; color:var(--ink-soft); border:2px solid transparent;
+  }
+  .seg.sel { background:#fff; border-color:var(--bike2); color:var(--ink); box-shadow:0 2px 8px rgba(150,90,160,.15); }
+  .daypick { display:flex; gap:6px; }
+  .dp {
+    flex:1; text-align:center; padding:9px 0; border-radius:12px; background:#f7f2f9; cursor:pointer;
+    font-size:12px; font-weight:800; color:var(--ink-soft); border:2px solid transparent; text-transform:uppercase;
+  }
+  .dp.sel { background:#fff; border-color:var(--run1); color:var(--ink); box-shadow:0 2px 8px rgba(45,212,191,.25); }
+  .hint { font-size:12px; color:var(--ink-soft); margin-top:6px; line-height:1.4; }
+
+  .field { margin-top:12px; }
+  .field label { display:block; font-size:12px; font-weight:800; margin-bottom:5px; }
+  .field input {
+    width:100%; padding:11px 12px; border:2px solid var(--line); border-radius:13px; font-size:13px;
+    font-family:ui-monospace,monospace; background:#fff; color:var(--ink);
+  }
+  .field small { display:block; font-size:11.5px; color:var(--ink-soft); margin-top:4px; line-height:1.4; }
+  .field small a { color:var(--bike2); }
+  .syncstatus { font-size:12.5px; margin-top:12px; padding:9px 12px; border-radius:12px; background:#f7f2f9; color:var(--ink-soft); }
+  .syncstatus.ok { background:#e8f8f3; color:#0f8a68; }
+  .syncstatus.err { background:#ffecec; color:#d43c3c; }
+
+  .confetti { position:fixed; top:-20px; font-size:20px; z-index:99; pointer-events:none; animation:fall linear forwards; }
+  @keyframes fall { to { transform:translateY(110vh) rotate(540deg); opacity:.7; } }
+
+  .medals { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; font-size:22px; }
+  .medals:empty::after { content:"Nog geen — jouw eerste volle week komt eraan! 💪"; font-size:13px; color:var(--ink-soft); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Sanne <span class="grad">traint</span> ✨</h1>
+  <div class="topbtns">
+    <button class="iconbtn" id="syncBtn" onclick="openSheet('syncSheet')" title="Sync">☁️<span class="dot"></span></button>
+    <button class="iconbtn" onclick="openSettings()" title="Instellingen">⚙️</button>
+  </div>
+</header>
+
+<div class="statbar">
+  <div class="stat">🔥 streak<b id="statStreak">0 weken</b></div>
+  <div class="stat">🏅 volle weken<b id="statMedals">0</b></div>
+  <div class="stat" id="statWeekWrap">✅ deze week<b id="statWeek">0/0</b></div>
+</div>
+
+<div class="weeknav">
+  <button onclick="nav(-1)">‹</button>
+  <div class="weeklabel"><b id="weekTitle"></b><small id="weekSub"></small></div>
+  <button class="todaybtn" id="todayBtn" onclick="nav(0)" style="display:none">vandaag</button>
+  <button onclick="nav(1)">›</button>
+</div>
+
+<main id="weekGrid"></main>
+
+<footer>Sanne Traint · v__BUILD_VERSION__</footer>
+
+<!-- ============ dag-sheet ============ -->
+<div class="overlay" id="daySheet" onclick="if(event.target===this)closeSheet('daySheet')">
+  <div class="sheet" id="daySheetBody"></div>
+</div>
+
+<!-- ============ instellingen ============ -->
+<div class="overlay" id="setSheet" onclick="if(event.target===this)closeSheet('setSheet')">
+  <div class="sheet">
+    <div class="sheethead">
+      <h2>Jouw programma ⚙️<small>Jij bepaalt — de app vult de week in.</small></h2>
+      <button class="closebtn" onclick="closeSheet('setSheet')">✕</button>
+    </div>
+
+    <div class="setlabel">🚴 Fietsritten per week</div>
+    <div class="stepper">
+      <button onclick="step('bike',-1)">−</button><b id="stepBike">2</b><button onclick="step('bike',1)">+</button>
+    </div>
+
+    <div class="setlabel">🏃 Looptrainingen per week</div>
+    <div class="stepper">
+      <button onclick="step('run',-1)">−</button><b id="stepRun">1</b><button onclick="step('run',1)">+</button>
+    </div>
+
+    <div class="setlabel">Niveau</div>
+    <div class="segs" id="segLevel"></div>
+    <div class="hint" id="levelHint"></div>
+
+    <div class="setlabel">Soort trainingen</div>
+    <div class="segs" id="segFocus"></div>
+
+    <div class="setlabel">Op welke dagen wil je trainen?</div>
+    <div class="daypick" id="dayPick"></div>
+    <div class="hint">Lange fietsritten plant de app het liefst in het weekend.</div>
+
+    <div class="setlabel">🏅 Jouw medailles</div>
+    <div class="medals" id="medalRow"></div>
+
+    <div class="btnrow">
+      <button class="btn primary" onclick="saveSettings()">Opslaan</button>
+    </div>
+    <div class="hint" style="margin-top:8px">Opslaan plant deze week en de weken erna opnieuw in. Dagen waar je al iets hebt afgevinkt blijven staan.</div>
+  </div>
+</div>
+
+<!-- ============ sync ============ -->
+<div class="overlay" id="syncSheet" onclick="if(event.target===this)closeSheet('syncSheet')">
+  <div class="sheet">
+    <div class="sheethead">
+      <h2>Sync ☁️<small>Bewaar alles in een privé GitHub Gist, zodat je het op al je apparaten ziet.</small></h2>
+      <button class="closebtn" onclick="closeSheet('syncSheet')">✕</button>
+    </div>
+    <div class="field">
+      <label>GitHub Personal Access Token</label>
+      <input id="inpToken" type="password" placeholder="ghp_…" autocomplete="off">
+      <small>Maak er een op <a href="https://github.com/settings/tokens/new?scopes=gist&description=SanneTraint" target="_blank" rel="noopener">github.com/settings/tokens</a> met alléén scope <code>gist</code>. Het token blijft in deze browser.</small>
+    </div>
+    <div class="field">
+      <label>Gist ID <span style="font-weight:400;color:var(--ink-soft)">(leeg = nieuwe aanmaken)</span></label>
+      <input id="inpGist" placeholder="bv. 8a3f2c1d4e5f…" autocomplete="off">
+      <small>Op een tweede apparaat: plak hier het Gist ID van het eerste apparaat.</small>
+    </div>
+    <div class="syncstatus" id="syncStatus">Nog niet verbonden.</div>
+    <div class="btnrow">
+      <button class="btn ghost" onclick="disconnectSync()">Uitzetten</button>
+      <button class="btn primary run" onclick="connectSync()">Verbinden</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+const APP_VERSION = 1;
+
+/* ============================================================
+   TRAININGSBIBLIOTHEEK
+   Niveaus: rustig | gemiddeld | pittig
+   Fietsritten ± 2–4 uur, looptrainingen ± 45–60 min.
+   dur = totale duur in minuten per niveau.
+   ============================================================ */
+const LEVELS = ['rustig','gemiddeld','pittig'];
+const LEVEL_LABEL = { rustig:'😌 Rustig', gemiddeld:'🙂 Gemiddeld', pittig:'🔥 Pittig' };
+const LEVEL_HINT = {
+  rustig:   'Fietsen ± 2 uur, lopen ± 45 min. Alles op praattempo.',
+  gemiddeld:'Fietsen ± 2,5–3 uur, lopen ± 50 min. Hier en daar wat pit.',
+  pittig:   'Fietsen ± 3–4 uur, lopen ± 55–60 min. Stevige blokken erin.'
+};
+const FOCUS = ['mix','duur','interval','techniek'];
+const FOCUS_LABEL = { mix:'🎲 Mix', duur:'🌳 Duur', interval:'⚡ Interval', techniek:'🎠 Techniek' };
+
+const LIB = [
+  /* -------- fietsen -------- */
+  { id:'b-duur', sport:'bike', type:'duur', name:'Rustige duurrit', emoji:'🌳',
+    dur:{ rustig:120, gemiddeld:150, pittig:195 },
+    blocks:{
+      rustig:   ['15 min rustig oprijden.', '1u30 op praattempo — lekker buiten zijn is het doel.', '15 min heel rustig naar huis.'],
+      gemiddeld:['15 min rustig oprijden.', '2 uur op praattempo, mooi gelijkmatig. Neem wat te eten mee.', '15 min heel rustig naar huis.'],
+      pittig:   ['15 min rustig oprijden.', '2u45 op praattempo. Eet elk uur iets en drink genoeg.', '15 min heel rustig naar huis.'] } },
+  { id:'b-tempo', sport:'bike', type:'duur', name:'Duurrit met tempoblokken', emoji:'🚀',
+    dur:{ rustig:135, gemiddeld:165, pittig:210 },
+    blocks:{
+      rustig:   ['20 min rustig oprijden.', '2× 10 min stevig doortrappen (praten wordt lastig), met 10 min rustig ertussen. De rest van de rit op praattempo.', '15 min rustig uitrijden.'],
+      gemiddeld:['20 min rustig oprijden.', '3× 15 min stevig doortrappen, met 10 min rustig ertussen. De rest op praattempo.', '15 min rustig uitrijden.'],
+      pittig:   ['20 min rustig oprijden.', '4× 15 min stevig doortrappen, met 8 min rustig ertussen. De rest op praattempo.', '15 min rustig uitrijden.'] } },
+  { id:'b-interval', sport:'bike', type:'interval', name:'Intervalrit', emoji:'⚡',
+    dur:{ rustig:120, gemiddeld:150, pittig:180 },
+    blocks:{
+      rustig:   ['20 min rustig oprijden.', '4× 3 min hard, met 4 min rustig ertussen. Daarna rustig verder rijden.', '15 min rustig uitrijden.'],
+      gemiddeld:['20 min rustig oprijden.', '6× 4 min hard, met 4 min rustig ertussen. Daarna rustig verder rijden.', '15 min rustig uitrijden.'],
+      pittig:   ['20 min rustig oprijden.', '2 series van 4× 4 min hard (4 min rust, 10 min tussen de series). Daarna rustig verder.', '15 min rustig uitrijden.'] } },
+  { id:'b-heuvel', sport:'bike', type:'interval', name:'Klim & kracht', emoji:'⛰️',
+    dur:{ rustig:135, gemiddeld:165, pittig:210 },
+    blocks:{
+      rustig:   ['20 min rustig oprijden.', 'Zoek een klimmetje of brug: 4× omhoog in een stevig tempo, rustig terug. Geen heuvel? 4× 4 min zwaar verzet, ± 60 rpm.', '15 min rustig uitrijden.'],
+      gemiddeld:['20 min rustig oprijden.', '6× omhoog in stevig tempo, rustig terug. Vlak alternatief: 6× 5 min zwaar verzet, ± 60 rpm.', '15 min rustig uitrijden.'],
+      pittig:   ['20 min rustig oprijden.', '8× omhoog: afwisselend zittend en staand. Vlak alternatief: 8× 5 min zwaar verzet, ± 55 rpm.', '15 min rustig uitrijden.'] } },
+  { id:'b-cadans', sport:'bike', type:'techniek', name:'Souplesse-rit', emoji:'🎠',
+    dur:{ rustig:120, gemiddeld:150, pittig:165 },
+    blocks:{
+      rustig:   ['15 min rustig oprijden.', '4× 5 min licht verzet met hoge trapfrequentie (100+ rpm), 5 min normaal ertussen. Rest op praattempo.', '15 min rustig uitrijden.'],
+      gemiddeld:['15 min rustig oprijden.', '5× 6 min hoge trapfrequentie (100–110 rpm), 5 min normaal ertussen. Plus 3× sprintje van 10 tellen.', '15 min rustig uitrijden.'],
+      pittig:   ['15 min rustig oprijden.', '6× 6 min 105–115 rpm, 4 min normaal ertussen. Plus 5× sprintje van 15 tellen uit een laag tempo.', '15 min rustig uitrijden.'] } },
+  { id:'b-ontdek', sport:'bike', type:'techniek', name:'Ontdekkingsrit', emoji:'🗺️',
+    dur:{ rustig:120, gemiddeld:165, pittig:210 },
+    blocks:{
+      rustig:   ['15 min rustig oprijden.', 'Kies een route (of stukken) die je nog nooit gereden hebt. Tempo vrij — nieuwsgierigheid telt, snelheid niet.', '15 min rustig naar huis.'],
+      gemiddeld:['15 min rustig oprijden.', 'Nieuwe route! Tempo vrij, maar pak onderweg 3 stukken van 10 min waar je even lekker doortrapt.', '15 min rustig naar huis.'],
+      pittig:   ['15 min rustig oprijden.', 'Nieuwe, lange route. Rijd elke plaatsnaambord-sprint of beklimming die je tegenkomt voluit.', '15 min rustig naar huis.'] } },
+  { id:'b-koffie', sport:'bike', type:'duur', name:'Koffierit', emoji:'☕',
+    dur:{ rustig:150, gemiddeld:180, pittig:240 },
+    blocks:{
+      rustig:   ['15 min rustig oprijden.', 'Duurrit op praattempo met halverwege een koffie- of taartstop. Neem iemand mee als dat kan!', 'Laatste 15 min extra rustig.'],
+      gemiddeld:['15 min rustig oprijden.', 'Duurrit op praattempo met koffiestop halverwege. Na de stop 2× 10 min vlot doortrappen.', 'Laatste 15 min extra rustig.'],
+      pittig:   ['15 min rustig oprijden.', 'Lange duurrit met koffiestop. Heenweg rustig, terugweg gestaag vlot — negatieve split!', 'Laatste 15 min extra rustig.'] } },
+
+  /* -------- lopen -------- */
+  { id:'r-duur', sport:'run', type:'duur', name:'Rustige duurloop', emoji:'🌤️',
+    dur:{ rustig:45, gemiddeld:50, pittig:60 },
+    blocks:{
+      rustig:   ['5 min stevig wandelen, dan rustig beginnen.', '35 min op praattempo — je moet de hele tijd kunnen kletsen.', '5 min uitwandelen en even losschudden.'],
+      gemiddeld:['5 min rustig inlopen.', '40 min op praattempo, mooi ontspannen.', '5 min uitlopen en even rekken als dat fijn voelt.'],
+      pittig:   ['5 min rustig inlopen.', '50 min op praattempo. Laatste 10 min mag ietsje vlotter als je je goed voelt.', '5 min uitlopen.'] } },
+  { id:'r-interval', sport:'run', type:'interval', name:'Intervallen', emoji:'⚡',
+    dur:{ rustig:45, gemiddeld:50, pittig:55 },
+    blocks:{
+      rustig:   ['10 min rustig inlopen.', '5× 2 min vlot (praten lukt nog nét), met 2 min dribbelen ertussen.', '10 min rustig uitlopen.'],
+      gemiddeld:['10 min inlopen + 3 versnellingen van 15 tellen.', '6× 3 min stevig, met 2 min dribbelen ertussen.', '10 min rustig uitlopen.'],
+      pittig:   ['10 min inlopen + 4 versnellingen van 20 tellen.', '8× 3 min stevig, met 90 sec dribbelen ertussen.', '10 min rustig uitlopen.'] } },
+  { id:'r-fartlek', sport:'run', type:'interval', name:'Fartlek', emoji:'🎲',
+    dur:{ rustig:45, gemiddeld:50, pittig:55 },
+    blocks:{
+      rustig:   ['10 min rustig inlopen.', '25 min spelen met tempo: versnel naar een lantaarnpaal, boom of bankje wanneer jíj dat wil, herstel tot je weer kunt praten.', '10 min rustig uitlopen.'],
+      gemiddeld:['10 min rustig inlopen.', '30 min fartlek: minstens 8 versnellingen van 30 sec tot 2 min, op gevoel. Tussendoor rustig dribbelen.', '10 min rustig uitlopen.'],
+      pittig:   ['10 min rustig inlopen.', '35 min fartlek: minstens 10 versnellingen, wissel kort-en-snel af met lang-en-stevig.', '10 min rustig uitlopen.'] } },
+  { id:'r-tempo', sport:'run', type:'interval', name:'Tempoloop', emoji:'🚀',
+    dur:{ rustig:45, gemiddeld:50, pittig:60 },
+    blocks:{
+      rustig:   ['10 min rustig inlopen.', '15 min vlot — een tempo dat je nét een half uur zou volhouden.', '10 min heel rustig uitlopen, plus wat wandelen.'],
+      gemiddeld:['10 min rustig inlopen.', '20 min vlot doorlopen in één stuk. Gelijkmatig is de kunst.', '10 min rustig uitlopen.'],
+      pittig:   ['10 min rustig inlopen.', '2× 15 min vlot, met 5 min dribbelen ertussen.', '10 min rustig uitlopen.'] } },
+  { id:'r-climax', sport:'run', type:'duur', name:'Climaxloop', emoji:'📈',
+    dur:{ rustig:45, gemiddeld:55, pittig:60 },
+    blocks:{
+      rustig:   ['5 min rustig inlopen.', '3 blokken van 11 min: elk blok een tandje sneller. Begin écht rustig, eindig vlot.', '7 min rustig uitlopen.'],
+      gemiddeld:['5 min rustig inlopen.', '4 blokken van 11 min: elk blok een tandje sneller. Het laatste blok is stevig.', '6 min rustig uitlopen.'],
+      pittig:   ['5 min rustig inlopen.', '4 blokken van 12 min, oplopend. Laatste blok richting je 10 km-tempo.', '7 min rustig uitlopen.'] } },
+  { id:'r-muziek', sport:'run', type:'techniek', name:'Playlist-run', emoji:'🎧',
+    dur:{ rustig:45, gemiddeld:50, pittig:55 },
+    blocks:{
+      rustig:   ['10 min rustig inlopen (rustig nummer!).', '25 min: vlot lopen tijdens je favoriete nummers, rustig bij de rest. Jouw playlist is de coach.', '10 min uitlopen op iets chills.'],
+      gemiddeld:['10 min rustig inlopen.', '30 min: elk refrein versnellen, coupletten rustig. Kies muziek met lekkere beats.', '10 min uitlopen.'],
+      pittig:   ['10 min rustig inlopen.', '35 min: hele nummers stevig, hele nummers rustig, om en om. Eindig met je allerbeste nummer — voluit.', '10 min uitlopen.'] } },
+];
+const LIB_BY_ID = Object.fromEntries(LIB.map(s => [s.id, s]));
+const BLOCK_TITLES = { bike:['Warming-up','Kern','Uitrijden'], run:['Warming-up','Kern','Uitlopen'] };
+
+/* ============================================================
+   STATE — localStorage primair + optionele Gist-sync
+   ============================================================ */
+const LS_KEY = 'sanneTrainingState';
+const SYNC_CFG_KEY = 'sanneSyncConfig';
+const SYNC_FILE = 'sanneTraining.json';
+
+let state = {
+  settings: { bike:2, run:1, level:'gemiddeld', focus:'mix', days:[2,4,6] }, // ISO-dagen: 1=ma … 7=zo
+  weeks: {}   // '2026-08-10' (maandag) -> { days: { '2026-08-12': { sid, done, smiley } } }
+};
+let viewOffset = 0;   // 0 = deze week
+let cloudPushTimer = null;
+
+function buildBlob(){ return { _meta:{ updatedAt:new Date().toISOString(), app:'sanne-traint', v:APP_VERSION }, settings:state.settings, weeks:state.weeks }; }
+function applyBlob(b){
+  if (!b || typeof b !== 'object') return;
+  if (b.settings && typeof b.settings === 'object') state.settings = Object.assign({}, state.settings, b.settings);
+  if (b.weeks && typeof b.weeks === 'object') state.weeks = b.weeks;
+}
+function readLocal(){ try { const r = localStorage.getItem(LS_KEY); return r ? JSON.parse(r) : null; } catch(e){ return null; } }
+function save(){
+  try { localStorage.setItem(LS_KEY, JSON.stringify(buildBlob())); } catch(e){ console.warn('localStorage:', e); }
+  scheduleCloudPush();
+}
+
+/* ---------- Gist-sync ---------- */
+function getSyncCfg(){ try { const r = localStorage.getItem(SYNC_CFG_KEY); return r ? JSON.parse(r) : null; } catch(e){ return null; } }
+function setSyncCfg(c){ if (c) localStorage.setItem(SYNC_CFG_KEY, JSON.stringify(c)); else localStorage.removeItem(SYNC_CFG_KEY); updateSyncBadge(); }
+function ghHeaders(token){ return { 'Authorization':'Bearer '+token, 'Accept':'application/vnd.github+json' }; }
+
+async function gistPull(cfg){
+  const r = await fetch('https://api.github.com/gists/'+cfg.gistId, { headers: ghHeaders(cfg.token) });
+  if (!r.ok) throw new Error('Gist ophalen mislukt (HTTP '+r.status+')');
+  const data = await r.json();
+  const f = data.files && data.files[SYNC_FILE];
+  if (!f || typeof f.content !== 'string') return null;
+  try { return JSON.parse(f.content); } catch(e){ return null; }
+}
+async function gistPush(cfg, blob){
+  const r = await fetch('https://api.github.com/gists/'+cfg.gistId, {
+    method:'PATCH', headers: Object.assign({ 'Content-Type':'application/json' }, ghHeaders(cfg.token)),
+    body: JSON.stringify({ files: { [SYNC_FILE]: { content: JSON.stringify(blob) } } })
+  });
+  if (!r.ok) throw new Error('Gist bijwerken mislukt (HTTP '+r.status+')');
+}
+async function gistCreate(token, blob){
+  const r = await fetch('https://api.github.com/gists', {
+    method:'POST', headers: Object.assign({ 'Content-Type':'application/json' }, ghHeaders(token)),
+    body: JSON.stringify({ description:'Sanne Traint — data (auto-managed)', public:false, files: { [SYNC_FILE]: { content: JSON.stringify(blob) } } })
+  });
+  if (!r.ok) throw new Error('Gist aanmaken mislukt (HTTP '+r.status+')');
+  return (await r.json()).id;
+}
+async function pullFromCloud(){
+  const cfg = getSyncCfg();
+  if (!cfg || !cfg.token || !cfg.gistId) return;
+  try {
+    const remote = await gistPull(cfg);
+    const local = readLocal();
+    const rT = remote && remote._meta ? remote._meta.updatedAt : '';
+    const lT = local && local._meta ? local._meta.updatedAt : '';
+    if (remote && rT > lT) { applyBlob(remote); localStorage.setItem(LS_KEY, JSON.stringify(remote)); render(); }
+    setStatus('ok', 'Gesynchroniseerd ✓ ('+new Date().toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})+')');
+  } catch(e){ setStatus('err', e.message); }
+  updateSyncBadge();
+}
+function scheduleCloudPush(){
+  const cfg = getSyncCfg();
+  if (!cfg || !cfg.token || !cfg.gistId) return;
+  clearTimeout(cloudPushTimer);
+  cloudPushTimer = setTimeout(async () => {
+    try { await gistPush(cfg, buildBlob()); setStatus('ok', 'Opgeslagen in de cloud ✓'); }
+    catch(e){ setStatus('err', e.message); }
+  }, 1500);
+}
+function setStatus(kind, msg){
+  const el = document.getElementById('syncStatus');
+  el.className = 'syncstatus ' + kind; el.textContent = msg;
+}
+function updateSyncBadge(){
+  document.getElementById('syncBtn').classList.toggle('synced', !!getSyncCfg());
+}
+async function connectSync(){
+  const token = document.getElementById('inpToken').value.trim();
+  let gistId = document.getElementById('inpGist').value.trim();
+  if (!token) { setStatus('err', 'Vul eerst een token in.'); return; }
+  setStatus('', 'Verbinden…');
+  try {
+    if (!gistId) { gistId = await gistCreate(token, buildBlob()); document.getElementById('inpGist').value = gistId; }
+    setSyncCfg({ token, gistId });
+    await pullFromCloud();
+  } catch(e){ setStatus('err', e.message); }
+}
+function disconnectSync(){
+  setSyncCfg(null);
+  setStatus('', 'Sync staat uit. Je data blijft gewoon in deze browser staan.');
+}
+
+/* ============================================================
+   DATUM-HULPJES
+   ============================================================ */
+const DOW = ['ma','di','wo','do','vr','za','zo'];
+const MONTHS = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
+function iso(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function mondayOf(d){ const x = new Date(d); x.setHours(0,0,0,0); x.setDate(x.getDate() - (x.getDay()+6)%7); return x; }
+function addDays(d, n){ const x = new Date(d); x.setDate(x.getDate()+n); return x; }
+function weekNr(d){
+  const x = new Date(d); x.setHours(0,0,0,0);
+  x.setDate(x.getDate() + 3 - (x.getDay()+6)%7);
+  const jan4 = new Date(x.getFullYear(), 0, 4);
+  return 1 + Math.round(((x - jan4)/86400000 - 3 + (jan4.getDay()+6)%7)/7);
+}
+function fmtDur(min){
+  if (min < 90) return min + ' min';
+  const h = Math.floor(min/60), m = min % 60;
+  return m ? h+'u'+String(m).padStart(2,'0') : h+' uur';
+}
+
+/* ============================================================
+   WEEKGENERATOR
+   ============================================================ */
+function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+function chooseSession(sport, avoidIds){
+  let pool = LIB.filter(s => s.sport === sport);
+  const focus = state.settings.focus;
+  if (focus !== 'mix') {
+    const focussed = pool.filter(s => s.type === focus);
+    if (focussed.length) pool = focussed;
+  }
+  const fresh = pool.filter(s => !avoidIds.includes(s.id));
+  return pick(fresh.length ? fresh : pool);
+}
+
+function generateWeek(monIso){
+  const s = state.settings;
+  const need = s.bike + s.run;
+  // Kandidaat-dagen: gekozen dagen eerst; te weinig? vul aan met overige dagen.
+  let days = (s.days && s.days.length ? s.days.slice() : [2,4,6]).sort((a,b)=>a-b);
+  if (days.length < need) {
+    for (const d of [6,7,3,5,2,4,1]) { if (!days.includes(d)) days.push(d); if (days.length >= need) break; }
+    days.sort((a,b)=>a-b);
+  }
+  const slots = days.slice(0, need);
+  // Fietsdagen: het dichtst bij het weekend (zo > za > vr > …).
+  const byWeekend = slots.slice().sort((a,b) => b - a);
+  const bikeDays = byWeekend.slice(0, s.bike);
+  // Sessies van vorige week vermijden voor variatie.
+  const prevIso = iso(addDays(new Date(monIso+'T12:00:00'), -7));
+  const prev = state.weeks[prevIso];
+  const avoid = prev ? Object.values(prev.days).map(x => x.sid) : [];
+  const week = { days:{} };
+  const mon = new Date(monIso+'T12:00:00');
+  for (const dow of slots) {
+    const sport = bikeDays.includes(dow) ? 'bike' : 'run';
+    const sess = chooseSession(sport, avoid);
+    avoid.push(sess.id);
+    week.days[iso(addDays(mon, dow-1))] = { sid: sess.id, done:false, smiley:null };
+  }
+  return week;
+}
+
+function getWeek(monIso){
+  if (!state.weeks[monIso]) { state.weeks[monIso] = generateWeek(monIso); save(); }
+  return state.weeks[monIso];
+}
+
+/* Herplan een week volgens de huidige instellingen; afgevinkte dagen blijven staan. */
+function replanWeek(monIso){
+  const old = state.weeks[monIso];
+  const done = {};
+  if (old) for (const [d, e] of Object.entries(old.days)) if (e.done) done[d] = e;
+  const fresh = generateWeek(monIso);
+  // Afgevinkte dagen winnen altijd van het nieuwe plan.
+  for (const [d, e] of Object.entries(done)) fresh.days[d] = e;
+  state.weeks[monIso] = fresh;
+}
+
+/* ============================================================
+   STATS
+   ============================================================ */
+function weekComplete(monIso){
+  const w = state.weeks[monIso];
+  if (!w) return false;
+  const entries = Object.values(w.days);
+  return entries.length > 0 && entries.every(e => e.done);
+}
+function computeStats(){
+  const medals = Object.keys(state.weeks).filter(weekComplete).length;
+  let streak = 0;
+  let m = mondayOf(new Date());
+  if (!weekComplete(iso(m))) m = addDays(m, -7);   // lopende week telt pas als hij af is
+  while (weekComplete(iso(m))) { streak++; m = addDays(m, -7); }
+  return { medals, streak };
+}
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+function currentMonday(){ return addDays(mondayOf(new Date()), viewOffset*7); }
+
+function render(){
+  const mon = currentMonday();
+  const monIso = iso(mon);
+  const week = getWeek(monIso);
+  const todayIso = iso(new Date());
+
+  const end = addDays(mon, 6);
+  document.getElementById('weekTitle').textContent = 'Week ' + weekNr(mon);
+  document.getElementById('weekSub').textContent =
+    mon.getDate() + ' ' + MONTHS[mon.getMonth()] + ' – ' + end.getDate() + ' ' + MONTHS[end.getMonth()];
+  document.getElementById('todayBtn').style.display = viewOffset === 0 ? 'none' : '';
+
+  const grid = document.getElementById('weekGrid');
+  grid.innerHTML = '';
+  for (let i = 0; i < 7; i++) {
+    const d = addDays(mon, i);
+    const dIso = iso(d);
+    const entry = week.days[dIso];
+    const sess = entry ? LIB_BY_ID[entry.sid] : null;
+    const isToday = dIso === todayIso;
+
+    const card = document.createElement('div');
+    card.className = 'day' + (isToday ? ' today' : '') + (sess ? '' : ' rest');
+    let inner =
+      '<div class="daydate">' +
+        '<div class="dow">' + DOW[i] + '</div>' +
+        '<div class="num">' + d.getDate() + '</div>' +
+        (isToday ? '<div class="todaytag">nu</div>' : '') +
+      '</div>';
+    if (sess) {
+      const lvl = state.settings.level;
+      inner +=
+        '<div class="dayemoji ' + sess.sport + '">' + sess.emoji + '</div>' +
+        '<div class="dayinfo">' +
+          '<div class="name">' + sess.name + '</div>' +
+          '<div class="meta"><span class="chip ' + sess.sport + '">' + (sess.sport==='bike'?'fietsen':'lopen') + '</span> ' +
+            fmtDur(sess.dur[lvl]) + (entry.smiley ? ' · ' + entry.smiley : '') + '</div>' +
+        '</div>' +
+        '<div class="doneball' + (entry.done ? ' on' : '') + '">✓</div>';
+      card.onclick = () => openDay(monIso, dIso);
+    } else {
+      inner +=
+        '<div class="dayemoji rest">😴</div>' +
+        '<div class="dayinfo"><div class="name">Rustdag</div>' +
+        '<div class="meta">Lekker niks — of een wandeling</div></div>';
+    }
+    card.innerHTML = inner;
+    grid.appendChild(card);
+  }
+
+  const entries = Object.values(week.days);
+  document.getElementById('statWeek').textContent = entries.filter(e=>e.done).length + '/' + entries.length;
+  const st = computeStats();
+  document.getElementById('statStreak').textContent = st.streak + (st.streak === 1 ? ' week' : ' weken');
+  document.getElementById('statMedals').textContent = st.medals;
+  updateSyncBadge();
+}
+
+function nav(dir){ viewOffset = dir === 0 ? 0 : viewOffset + dir; render(); }
+
+/* ---------- dag-sheet ---------- */
+let sheetCtx = null;
+
+function openDay(monIso, dIso){
+  sheetCtx = { monIso, dIso };
+  renderDaySheet();
+  openSheet('daySheet');
+}
+function renderDaySheet(){
+  const { monIso, dIso } = sheetCtx;
+  const entry = state.weeks[monIso].days[dIso];
+  const sess = LIB_BY_ID[entry.sid];
+  const lvl = state.settings.level;
+  const d = new Date(dIso+'T12:00:00');
+  const titles = BLOCK_TITLES[sess.sport];
+  const cls = ['wu','kn','cd'];
+  const smilies = [['😅','zwaar'],['🙂','prima'],['🤩','top!']];
+
+  document.getElementById('daySheetBody').innerHTML =
+    '<div class="sheethead">' +
+      '<h2>' + sess.emoji + ' ' + sess.name +
+        '<small>' + DOW[(d.getDay()+6)%7] + ' ' + d.getDate() + ' ' + MONTHS[d.getMonth()] +
+        ' · ' + fmtDur(sess.dur[lvl]) + ' · niveau ' + lvl + '</small></h2>' +
+      '<button class="closebtn" onclick="closeSheet(\'daySheet\')">✕</button>' +
+    '</div>' +
+    sess.blocks[lvl].map((txt, i) =>
+      '<div class="block ' + cls[i] + (sess.sport==='run' ? ' run' : '') + '">' +
+        '<div class="bt">' + titles[i] + '</div><div class="bd">' + txt + '</div></div>'
+    ).join('') +
+    '<div class="smilies">' + smilies.map(([em, lab]) =>
+      '<div class="smiley' + (entry.smiley === em ? ' sel' : '') + '" onclick="setSmiley(\'' + em + '\')">' +
+        em + '<small>' + lab + '</small></div>').join('') +
+    '</div>' +
+    '<div class="btnrow">' +
+      '<button class="btn ghost" onclick="shuffleDay()">🎲 Andere training</button>' +
+      '<button class="btn primary ' + (sess.sport==='run'?'run':'') + '" onclick="toggleDone()">' +
+        (entry.done ? 'Toch niet gedaan' : '✓ Gedaan!') + '</button>' +
+    '</div>';
+}
+function setSmiley(em){
+  const e = state.weeks[sheetCtx.monIso].days[sheetCtx.dIso];
+  e.smiley = e.smiley === em ? null : em;
+  save(); renderDaySheet(); render();
+}
+function toggleDone(){
+  const e = state.weeks[sheetCtx.monIso].days[sheetCtx.dIso];
+  e.done = !e.done;
+  save(); render();
+  if (e.done) {
+    confetti();
+    if (weekComplete(sheetCtx.monIso)) setTimeout(confetti, 350);
+    closeSheet('daySheet');
+  } else renderDaySheet();
+}
+function shuffleDay(){
+  const e = state.weeks[sheetCtx.monIso].days[sheetCtx.dIso];
+  const sess = LIB_BY_ID[e.sid];
+  const others = Object.values(state.weeks[sheetCtx.monIso].days).map(x => x.sid);
+  const next = chooseSession(sess.sport, others);
+  e.sid = next.id; e.done = false; e.smiley = null;
+  save(); renderDaySheet(); render();
+}
+
+/* ---------- instellingen ---------- */
+let draft = null;
+
+function openSettings(){
+  draft = JSON.parse(JSON.stringify(state.settings));
+  renderSettings();
+  openSheet('setSheet');
+}
+function renderSettings(){
+  document.getElementById('stepBike').textContent = draft.bike;
+  document.getElementById('stepRun').textContent = draft.run;
+  document.getElementById('segLevel').innerHTML = LEVELS.map(l =>
+    '<div class="seg' + (draft.level === l ? ' sel' : '') + '" onclick="draft.level=\'' + l + '\';renderSettings()">' + LEVEL_LABEL[l] + '</div>').join('');
+  document.getElementById('levelHint').textContent = LEVEL_HINT[draft.level];
+  document.getElementById('segFocus').innerHTML = FOCUS.map(f =>
+    '<div class="seg' + (draft.focus === f ? ' sel' : '') + '" onclick="draft.focus=\'' + f + '\';renderSettings()">' + FOCUS_LABEL[f] + '</div>').join('');
+  document.getElementById('dayPick').innerHTML = DOW.map((lab, i) => {
+    const dow = i + 1;
+    return '<div class="dp' + (draft.days.includes(dow) ? ' sel' : '') + '" onclick="toggleDay(' + dow + ')">' + lab + '</div>';
+  }).join('');
+  const st = computeStats();
+  document.getElementById('medalRow').innerHTML = '🏅'.repeat(st.medals);
+}
+function step(kind, delta){
+  const max = kind === 'bike' ? 5 : 5;
+  draft[kind] = Math.min(max, Math.max(0, draft[kind] + delta));
+  if (draft.bike + draft.run === 0) draft[kind] = 1;   // minstens één training
+  renderSettings();
+}
+function toggleDay(dow){
+  const i = draft.days.indexOf(dow);
+  if (i >= 0) draft.days.splice(i, 1); else draft.days.push(dow);
+  renderSettings();
+}
+function saveSettings(){
+  state.settings = draft;
+  // Deze week en alle toekomstige weken opnieuw inplannen (gedane dagen blijven).
+  const curIso = iso(mondayOf(new Date()));
+  for (const monIso of Object.keys(state.weeks)) if (monIso >= curIso) replanWeek(monIso);
+  save(); closeSheet('setSheet'); render();
+}
+
+/* ---------- sheets & confetti ---------- */
+function openSheet(id){ document.getElementById(id).classList.add('open'); }
+function closeSheet(id){ document.getElementById(id).classList.remove('open'); }
+
+function confetti(){
+  const bits = ['🎉','✨','💪','⭐','🧡','💚'];
+  for (let i = 0; i < 26; i++) {
+    const el = document.createElement('div');
+    el.className = 'confetti';
+    el.textContent = pick(bits);
+    el.style.left = (Math.random()*100) + 'vw';
+    el.style.animationDuration = (1.4 + Math.random()*1.6) + 's';
+    el.style.animationDelay = (Math.random()*.4) + 's';
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 3600);
+  }
+}
+
+/* ---------- init ---------- */
+(function init(){
+  const local = readLocal();
+  if (local) applyBlob(local);
+  const cfg = getSyncCfg();
+  if (cfg) {
+    document.getElementById('inpToken').value = cfg.token || '';
+    document.getElementById('inpGist').value = cfg.gistId || '';
+  }
+  render();
+  pullFromCloud();
+})();
+</script>
+</body>
+</html>
