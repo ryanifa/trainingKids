@@ -154,6 +154,8 @@
     font-size:12px; font-weight:800; color:var(--ink-soft); border:2px solid transparent; text-transform:uppercase;
   }
   .dp.sel { background:#fff; border-color:var(--run1); color:var(--ink); box-shadow:0 2px 8px rgba(45,212,191,.25); }
+  .dp small { display:block; font-size:10px; font-weight:700; color:var(--ink-soft); text-transform:none; }
+  .dp.cur { border-color:var(--bike2); background:#fff0f7; color:var(--ink); cursor:default; }
   .hint { font-size:12px; color:var(--ink-soft); margin-top:6px; line-height:1.4; }
 
   .field { margin-top:12px; }
@@ -273,7 +275,7 @@
 
 <script>
 'use strict';
-const APP_VERSION = 2;
+const APP_VERSION = 3;
 
 /* ============================================================
    TRAININGSBIBLIOTHEEK
@@ -672,6 +674,24 @@ function renderDaySheet(){
       '<div class="smiley' + (entry.smiley === em ? ' sel' : '') + '" onclick="setSmiley(\'' + em + '\')">' +
         em + '<small>' + lab + '</small></div>').join('') +
     '</div>' +
+    '<div class="setlabel">📅 Verplaatsen naar</div>' +
+    '<div class="daypick">' + (function(){
+      const mon = new Date(monIso+'T12:00:00');
+      const week = state.weeks[monIso];
+      let html = '';
+      for (let i = 0; i < 7; i++) {
+        const t = addDays(mon, i), tIso = iso(t);
+        const occ = week.days[tIso];
+        if (tIso === dIso) {
+          html += '<div class="dp cur">' + DOW[i] + '<small>' + t.getDate() + '</small></div>';
+        } else {
+          html += '<div class="dp" onclick="moveDay(\'' + tIso + '\')">' + DOW[i] +
+                  '<small>' + (occ ? LIB_BY_ID[occ.sid].emoji : t.getDate()) + '</small></div>';
+        }
+      }
+      return html;
+    })() + '</div>' +
+    '<div class="hint">Staat er al een training op die dag? Dan ruilen ze van plek.</div>' +
     '<div class="btnrow">' +
       '<button class="btn ghost" onclick="shuffleDay()">🎲 Andere training</button>' +
       '<button class="btn primary ' + (sess.sport==='run'?'run':'') + '" onclick="toggleDone()">' +
@@ -692,6 +712,16 @@ function toggleDone(){
     if (weekComplete(sheetCtx.monIso)) setTimeout(confetti, 350);
     closeSheet('daySheet');
   } else renderDaySheet();
+}
+function moveDay(tIso){
+  const week = state.weeks[sheetCtx.monIso];
+  const dIso = sheetCtx.dIso;
+  const entry = week.days[dIso];
+  const target = week.days[tIso];
+  if (target) week.days[dIso] = target; else delete week.days[dIso];
+  week.days[tIso] = entry;
+  sheetCtx.dIso = tIso;
+  save(); renderDaySheet(); render();
 }
 function shuffleDay(){
   const e = state.weeks[sheetCtx.monIso].days[sheetCtx.dIso];
