@@ -200,7 +200,7 @@
 
 <main id="weekGrid"></main>
 
-<footer>Sanne Traint · v__BUILD_VERSION__</footer>
+<footer id="footerVersion">Sanne Traint</footer>
 
 <!-- ============ dag-sheet ============ -->
 <div class="overlay" id="daySheet" onclick="if(event.target===this)closeSheet('daySheet')">
@@ -273,7 +273,7 @@
 
 <script>
 'use strict';
-const APP_VERSION = 1;
+const APP_VERSION = 2;
 
 /* ============================================================
    TRAININGSBIBLIOTHEEK
@@ -764,6 +764,10 @@ function confetti(){
 
 /* ---------- init ---------- */
 (function init(){
+  // Buildversie wordt bij deploy door de workflow ingevuld; lokaal blijft de placeholder staan.
+  const bv = '__BUILD_VERSION__';
+  document.getElementById('footerVersion').textContent =
+    'Sanne Traint · v' + APP_VERSION + (bv.indexOf('__') === 0 ? ' · lokaal' : ' · build ' + bv);
   const local = readLocal();
   if (local) applyBlob(local);
   const cfg = getSyncCfg();
